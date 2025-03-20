@@ -1,0 +1,1841 @@
+{% extends "base.html" %}
+
+{% block title %}Room - SoundRoom{% endblock %}
+
+{% block header_nav %}
+<a href="/" class="bg-black bg-opacity-60 rounded-full w-8 h-8 flex items-center justify-center">
+    <i class="fa-solid fa-home"></i>
+</a>
+{% endblock %}
+
+{% block content %}
+<div id="room-container">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h1 id="room-title" class="text-3xl font-bold">Loading room...</h1>
+            <p id="room-created-by" class="text-spotify-light-gray"></p>
+        </div>
+
+        <div class="flex gap-2">
+            <button id="share-room-btn" class="btn-spotify btn-spotify-sm flex items-center">
+                <i class="fa-solid fa-share-alt mr-2"></i> Share Room
+            </button>
+            <button id="edit-room-btn" class="btn-spotify btn-spotify-sm flex items-center">
+                <i class="fa-solid fa-edit mr-2"></i> Edit Room
+            </button>
+        </div>
+    </div>
+
+    <div id="share-link-container" class="bg-spotify-dark-gray rounded-lg p-4 mb-6 hidden">
+        <p class="mb-2">Share this link with friends:</p>
+        <div class="flex gap-2">
+            <input id="share-link" type="text" class="spotify-input flex-grow" readonly>
+            <button id="copy-share-link" class="btn-spotify btn-spotify-sm">
+                <i class="fa-solid fa-copy"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Edit Room Modal -->
+    <div id="edit-room-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-spotify-dark-gray rounded-lg w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Edit Room</h2>
+                <button id="close-edit-modal" class="text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="edit-room-name" class="block mb-1">Room Name</label>
+                    <input type="text" id="edit-room-name" class="spotify-input w-full">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button id="save-room-btn" class="btn-spotify">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-bar">
+        <div class="tab active" data-tab="albums">
+            <i class="fa-solid fa-circle-play"></i> Albums
+        </div>
+        <div class="tab" data-tab="add-album">
+            <i class="fa-solid fa-plus"></i> Add Album
+        </div>
+        <div class="tab" data-tab="members">
+            <i class="fa-solid fa-user-group"></i> Members
+        </div>
+        <div class="tab" data-tab="ratings">
+            <i class="fa-solid fa-star"></i> Ratings
+        </div>
+    </div>
+
+    <div id="albums-tab" class="tab-content">
+        <div id="albums-list" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <div id="add-album-tab" class="tab-content hidden">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-4">Search for an Album</h2>
+            <div class="flex gap-2">
+                <input type="text" id="album-search" placeholder="Search Spotify..." class="spotify-input flex-grow">
+            </div>
+        </div>
+
+        <div id="search-results" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Search results will appear here -->
+        </div>
+
+        <div class="mt-10">
+            <h2 class="text-2xl font-bold mb-4">Recommended Albums</h2>
+            <div id="recommended-albums" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <p class="col-span-full text-center text-spotify-light-gray py-4">Loading recommendations...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="members-tab" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold">Room Members</h2>
+            <button id="add-member-btn" class="btn-spotify btn-spotify-sm">
+                <i class="fa-solid fa-user-plus mr-2"></i> Add Member
+            </button>
+        </div>
+
+        <div id="add-member-container" class="bg-spotify-dark-gray rounded-lg p-4 mb-6 hidden">
+            <p class="mb-2">Add member by Spotify ID or email:</p>
+            <div class="flex gap-2">
+                <input id="member-id-input" type="text" class="spotify-input flex-grow"
+                    placeholder="Spotify ID or email">
+                <button id="confirm-add-member" class="btn-spotify btn-spotify-sm">Add</button>
+            </div>
+        </div>
+
+        <div id="members-list" class="space-y-3">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <div id="ratings-tab" class="tab-content hidden">
+        <h2 class="text-2xl font-bold mb-4">Album Ratings</h2>
+        <div id="ratings-table-container" class="overflow-x-auto">
+            <table class="min-w-full bg-spotify-dark-gray rounded-lg overflow-hidden">
+                <thead class="bg-spotify-green bg-opacity-10">
+                    <tr id="ratings-header-row">
+                        <th class="py-3 px-4 text-left">Album</th>
+                        <!-- User columns will be added dynamically -->
+                        <th class="py-3 px-4 text-center">Average</th>
+                    </tr>
+                </thead>
+                <tbody id="ratings-table-body">
+                    <tr>
+                        <td colspan="2" class="py-8 text-center text-spotify-light-gray">
+                            <div class="spinner"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-confirmation-modal"
+    class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-spotify-dark-gray rounded-lg w-full max-w-md p-6">
+        <h2 class="text-2xl font-bold mb-4" id="delete-confirmation-title">Confirm Deletion</h2>
+        <p class="mb-6" id="delete-confirmation-message">Are you sure you want to delete this item?</p>
+        <div class="flex justify-end gap-2">
+            <button id="cancel-delete-btn" class="btn-spotify bg-spotify-gray">Cancel</button>
+            <button id="confirm-delete-btn" class="btn-spotify bg-red-600">Delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Room ID and global variables
+    const roomId = "{{ room_id }}";
+    let roomData = null;
+    let roomMembers = [];
+    let roomAlbumsData = [];
+    let isRoomCreator = false;
+    let currentDeleteItem = null;
+    let currentDeleteType = null;
+
+    // Load room data
+    function loadRoomData() {
+        db.collection('rooms').doc(roomId).get()
+            .then(doc => {
+                if (doc.exists) {
+                    roomData = doc.data();
+                    document.getElementById('room-title').textContent = roomData.name;
+                    document.getElementById('share-link').value = window.location.href;
+
+                    // For edit modal
+                    document.getElementById('edit-room-name').value = roomData.name;
+
+                    // Check if current user is room creator
+                    const currentUserId = "spotify:{{ session.get('spotify_user', {}).get('id', '') }}";
+                    isRoomCreator = (roomData.createdBy === currentUserId);
+
+                    // Show/hide edit button based on creator status
+                    document.getElementById('edit-room-btn').style.display = isRoomCreator ? 'flex' : 'none';
+
+                    // Add delete room button if user is creator
+                    if (isRoomCreator) {
+                        addDeleteRoomButton();
+                    }
+
+                    // Get creator name
+                    getCreatorName(roomData.createdBy);
+
+                    // Load albums and members
+                    loadAlbums();
+                    loadMembers();
+
+                    // Load recommendations if we have albums
+                    if (roomData.albums && roomData.albums.length > 0) {
+                        loadRecommendedAlbums();
+                    }
+                } else {
+                    alert('Room not found!');
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => {
+                console.error("Error loading room: ", error);
+                alert('Error loading room: ' + error.message);
+            });
+    }
+
+    // Get creator name
+    function getCreatorName(creatorId) {
+        // Extract Spotify ID if it has prefix
+        const spotifyId = creatorId.startsWith('spotify:') ? creatorId.split(':')[1] : creatorId;
+
+        // Check if it's the current user
+        if (spotifyId === "{{ session.get('spotify_user', {}).get('id', '') }}") {
+            document.getElementById('room-created-by').textContent = 'Created by you';
+            return;
+        }
+
+        // Fetch creator info from database
+        db.collection('users').doc(creatorId).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const userData = doc.data();
+                    document.getElementById('room-created-by').textContent = `Created by ${userData.displayName || 'Unknown user'}`;
+                }
+            });
+    }
+
+    // Add delete room button
+    function addDeleteRoomButton() {
+        // Get the button container
+        const buttonContainer = document.querySelector('.flex.gap-2');
+        if (!buttonContainer) return;
+
+        // Check if button already exists
+        if (document.getElementById('delete-room-btn')) return;
+
+        // Create delete room button
+        const deleteRoomBtn = document.createElement('button');
+        deleteRoomBtn.id = 'delete-room-btn';
+        deleteRoomBtn.className = 'btn-spotify btn-spotify-sm flex items-center';
+        deleteRoomBtn.style.backgroundColor = '#dc2626';
+        deleteRoomBtn.innerHTML = '<i class="fa-solid fa-trash mr-2"></i> Delete Room';
+
+        // Add click event
+        deleteRoomBtn.addEventListener('click', function () {
+            confirmDeleteRoom();
+        });
+
+        // Add to container
+        buttonContainer.appendChild(deleteRoomBtn);
+    }
+
+    // Load albums
+    function loadAlbums() {
+        const albumsList = document.getElementById('albums-list');
+        albumsList.innerHTML = '';
+
+        if (!roomData.albums || roomData.albums.length === 0) {
+            albumsList.innerHTML = '<div class="col-span-full text-center py-8 text-spotify-light-gray">No albums added yet. Go to "Add Album" to start!</div>';
+            return;
+        }
+
+        roomAlbumsData = []; // Reset the albums data array
+        const albumPromises = roomData.albums.map(albumId => {
+            return db.collection('albums').doc(albumId).get();
+        });
+
+        Promise.all(albumPromises)
+            .then(snapshots => {
+                snapshots.forEach(doc => {
+                    if (doc.exists) {
+                        const albumData = doc.data();
+                        roomAlbumsData.push({ id: doc.id, ...albumData }); // Store album data for ratings table
+
+                        const albumCard = document.createElement('div');
+                        albumCard.className = 'album-card relative cursor-pointer';
+
+                        // Calculate overall rating
+                        const ratingDisplay = albumData.averageRating
+                            ? `<div class="absolute top-2 right-2 w-8 h-8 rounded-full bg-spotify-green flex items-center justify-center font-bold text-sm">${albumData.averageRating}</div>`
+                            : '';
+
+                        // Add delete button if user is room creator
+                        const deleteButton = isRoomCreator
+                            ? `<button class="delete-album-btn absolute top-2 left-2 w-8 h-8 rounded-full bg-red-600 bg-opacity-80 flex items-center justify-center text-white hover:bg-opacity-100" data-album-id="${doc.id}">
+                            <i class="fa-solid fa-trash"></i>
+                           </button>`
+                            : '';
+
+                        albumCard.innerHTML = `
+                        <div class="relative">
+                            <img src="${albumData.coverUrl || 'https://i.scdn.co/image/ab67616d0000b273c628cc25720a9648b1219e5b'}" alt="${albumData.name}" class="album-cover mb-3">
+                            ${ratingDisplay}
+                            ${deleteButton}
+                        </div>
+                        <div class="album-title">${albumData.name}</div>
+                        <div class="album-artist">${albumData.artist}</div>
+                    `;
+
+                        albumCard.addEventListener('click', (e) => {
+                            // Don't navigate if clicked on delete button
+                            if (e.target.closest('.delete-album-btn')) {
+                                return;
+                            }
+                            window.location.href = `/album/${roomId}/${doc.id}`;
+                        });
+
+                        // Add event listener for delete button
+                        if (isRoomCreator) {
+                            const deleteBtn = albumCard.querySelector('.delete-album-btn');
+                            deleteBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+
+                                // Hide the delete room button when deleting an album
+                                const deleteRoomBtn = document.getElementById('delete-room-btn');
+                                if (deleteRoomBtn) {
+                                    deleteRoomBtn.style.display = 'none';
+                                }
+
+                                const albumId = e.currentTarget.getAttribute('data-album-id');
+                                confirmDelete('album', albumId, albumData.name);
+                            });
+                        }
+
+                        albumsList.appendChild(albumCard);
+                    }
+                });
+
+                if (albumsList.innerHTML === '') {
+                    albumsList.innerHTML = '<div class="col-span-full text-center py-8 text-spotify-light-gray">No albums found. Check the "Add Album" tab.</div>';
+                }
+
+                // Load ratings after albums are loaded
+                loadRatings();
+            });
+    }
+
+    // Load members
+    function loadMembers() {
+        const membersList = document.getElementById('members-list');
+        membersList.innerHTML = '';
+
+        if (!roomData.members || roomData.members.length === 0) {
+            membersList.innerHTML = '<div class="text-center py-8 text-spotify-light-gray">No members yet</div>';
+            return;
+        }
+
+        roomMembers = []; // Reset the members array
+        const memberPromises = roomData.members.map(memberId => {
+            // Extract Spotify ID if it has prefix
+            const id = memberId.startsWith('spotify:') ? memberId.split(':')[1] : memberId;
+
+            // Fetch user info
+            return fetch(`https://api.spotify.com/v1/users/${id}`, {
+                headers: {
+                    'Authorization': 'Bearer {{ session.get("spotify_token_info", {}).get("access_token", "") }}'
+                }
+            })
+                .then(response => {
+                    if (response.ok) return response.json();
+                    return { id, display_name: 'Unknown User' };
+                })
+                .catch(() => {
+                    return { id, display_name: 'Unknown User' };
+                });
+        });
+
+        Promise.all(memberPromises)
+            .then(users => {
+                users.forEach(user => {
+                    // Store member data for ratings table
+                    roomMembers.push({
+                        id: user.id,
+                        displayName: user.display_name,
+                        image: user.images && user.images.length > 0 ? user.images[0].url : null
+                    });
+
+                    const memberItem = document.createElement('div');
+                    memberItem.className = 'flex items-center justify-between p-4 bg-spotify-dark-gray rounded-lg';
+
+                    const profileImage = user.images && user.images.length > 0
+                        ? `<img src="${user.images[0].url}" alt="${user.display_name}" class="w-12 h-12 rounded-full">`
+                        : `<div class="w-12 h-12 rounded-full bg-spotify-green flex items-center justify-center">
+                          <span class="text-white font-bold">${user.display_name.charAt(0)}</span>
+                       </div>`;
+
+                    const userId = `spotify:${user.id}`;
+                    const isCurrentUser = userId === "spotify:{{ session.get('spotify_user', {}).get('id', '') }}";
+                    const canRemove = isRoomCreator && !isCurrentUser;
+
+                    const removeButton = canRemove
+                        ? `<button class="remove-member-btn text-red-500 hover:text-red-300" data-member-id="${userId}">
+                         <i class="fa-solid fa-user-minus"></i> Remove
+                       </button>`
+                        : '';
+
+                    memberItem.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        ${profileImage}
+                        <div>
+                            <div class="font-bold">${user.display_name}</div>
+                            <div class="text-sm text-spotify-light-gray">Spotify User</div>
+                        </div>
+                    </div>
+                    ${removeButton}
+                `;
+
+                    // Add event listener for remove button
+                    if (canRemove) {
+                        const removeBtn = memberItem.querySelector('.remove-member-btn');
+                        removeBtn.addEventListener('click', (e) => {
+                            // Hide the delete room button when removing a member
+                            const deleteRoomBtn = document.getElementById('delete-room-btn');
+                            if (deleteRoomBtn) {
+                                deleteRoomBtn.style.display = 'none';
+                            }
+
+                            const memberId = e.currentTarget.getAttribute('data-member-id');
+                            confirmDelete('member', memberId, user.display_name);
+                        });
+                    }
+
+                    membersList.appendChild(memberItem);
+                });
+
+                // Load ratings after members are loaded
+                loadRatings();
+            });
+    }
+
+    // Confirm delete function
+    function confirmDelete(type, id, name) {
+        const modal = document.getElementById('delete-confirmation-modal');
+        const title = document.getElementById('delete-confirmation-title');
+        const message = document.getElementById('delete-confirmation-message');
+
+        currentDeleteType = type;
+        currentDeleteItem = id;
+
+        if (type === 'album') {
+            title.textContent = 'Remove Album';
+            message.textContent = `Are you sure you want to remove "${name}" from this room?`;
+        } else if (type === 'member') {
+            title.textContent = 'Remove Member';
+            message.textContent = `Are you sure you want to remove ${name} from this room?`;
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    // Confirm delete room function (separate from regular delete)
+    function confirmDeleteRoom() {
+        const modal = document.getElementById('delete-confirmation-modal');
+        const title = document.getElementById('delete-confirmation-title');
+        const message = document.getElementById('delete-confirmation-message');
+
+        title.textContent = 'Delete Room';
+        message.textContent = `Are you sure you want to delete "${roomData.name}"? This action cannot be undone.`;
+
+        // Store original item and type
+        const originalDeleteType = currentDeleteType;
+        const originalDeleteItem = currentDeleteItem;
+
+        // Set special type for room deletion
+        currentDeleteType = 'room';
+        currentDeleteItem = roomId;
+
+        modal.classList.remove('hidden');
+    }
+
+    // Load ratings data and populate the ratings table
+    function loadRatings() {
+        // Make sure we have both members and albums loaded
+        if (roomMembers.length === 0 || roomAlbumsData.length === 0) {
+            return; // We'll try again when both are loaded
+        }
+
+        const headerRow = document.getElementById('ratings-header-row');
+        const tableBody = document.getElementById('ratings-table-body');
+
+        // Clear existing content
+        tableBody.innerHTML = '';
+
+        // Reset header row, keeping only the first and last columns
+        headerRow.innerHTML = '<th class="py-3 px-4 text-left">Album</th>';
+
+        // Add a column for each member
+        roomMembers.forEach(member => {
+            const memberHeader = document.createElement('th');
+            memberHeader.className = 'py-3 px-4 text-center';
+
+            const avatar = member.image
+                ? `<img src="${member.image}" alt="${member.displayName}" class="w-8 h-8 rounded-full inline-block">`
+                : `<div class="w-8 h-8 rounded-full bg-spotify-green inline-flex items-center justify-center">
+                  <span class="text-white font-bold">${member.displayName.charAt(0)}</span>
+               </div>`;
+
+            memberHeader.innerHTML = `
+            <div class="flex flex-col items-center">
+                ${avatar}
+                <span class="text-xs mt-1">${member.displayName}</span>
+            </div>
+        `;
+
+            headerRow.appendChild(memberHeader);
+        });
+
+        // Add the average column
+        const averageHeader = document.createElement('th');
+        averageHeader.className = 'py-3 px-4 text-center';
+        averageHeader.textContent = 'Average';
+        headerRow.appendChild(averageHeader);
+
+        // Fetch ratings for each album
+        const ratingPromises = roomAlbumsData.map(album => {
+            return db.collection('ratings')
+                .where('albumId', '==', album.id)
+                .where('roomId', '==', roomId)
+                .get()
+                .then(snapshot => {
+                    const ratings = {};
+                    snapshot.forEach(doc => {
+                        const ratingData = doc.data();
+                        ratings[ratingData.userId] = ratingData.ratings || {};
+                    });
+                    return { albumId: album.id, ratings };
+                });
+        });
+
+        Promise.all(ratingPromises)
+            .then(albumRatings => {
+                // Create a row for each album
+                roomAlbumsData.forEach(album => {
+                    const albumRow = document.createElement('tr');
+                    albumRow.className = 'border-t border-spotify-light-gray border-opacity-20';
+
+                    // Album info cell
+                    const albumCell = document.createElement('td');
+                    albumCell.className = 'py-4 px-4';
+                    albumCell.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${album.coverUrl || 'https://i.scdn.co/image/ab67616d0000b273c628cc25720a9648b1219e5b'}" 
+                             alt="${album.name}" 
+                             class="w-12 h-12 rounded">
+                        <div>
+                            <div class="font-medium">${album.name}</div>
+                            <div class="text-sm text-spotify-light-gray">${album.artist}</div>
+                        </div>
+                    </div>
+                `;
+                    albumRow.appendChild(albumCell);
+
+                    // Find this album's ratings
+                    const albumRating = albumRatings.find(r => r.albumId === album.id) || { ratings: {} };
+                    const validRatings = [];
+
+                    // Add a cell for each member's rating
+                    roomMembers.forEach(member => {
+                        const memberId = member.id.startsWith('spotify:') ? member.id : `spotify:${member.id}`;
+                        const memberRating = albumRating.ratings[memberId] || {};
+                        const overallRating = memberRating.overall || '-';
+
+                        if (overallRating !== '-') {
+                            validRatings.push(parseFloat(overallRating));
+                        }
+
+                        const ratingCell = document.createElement('td');
+                        ratingCell.className = 'py-4 px-4 text-center';
+
+                        const ratingColor = overallRating !== '-'
+                            ? getColorForRating(overallRating)
+                            : 'bg-spotify-dark-gray';
+
+                        ratingCell.innerHTML = `
+                        <div class="w-10 h-10 ${ratingColor} rounded-full flex items-center justify-center font-bold mx-auto">
+                            ${overallRating}
+                        </div>
+                    `;
+
+                        albumRow.appendChild(ratingCell);
+                    });
+
+                    // Calculate and add average rating
+                    const avgRating = validRatings.length > 0
+                        ? (validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length).toFixed(1)
+                        : '-';
+
+                    const avgCell = document.createElement('td');
+                    avgCell.className = 'py-4 px-4 text-center font-bold';
+
+                    const avgColor = avgRating !== '-'
+                        ? getColorForRating(avgRating)
+                        : 'bg-spotify-dark-gray';
+
+                    avgCell.innerHTML = `
+                    <div class="w-10 h-10 ${avgColor} rounded-full flex items-center justify-center mx-auto">
+                        ${avgRating}
+                    </div>
+                `;
+
+                    albumRow.appendChild(avgCell);
+                    tableBody.appendChild(albumRow);
+                });
+
+                // Show message if no albums
+                if (roomAlbumsData.length === 0) {
+                    tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="${roomMembers.length + 2}" class="py-8 text-center text-spotify-light-gray">
+                            No albums added to this room yet
+                        </td>
+                    </tr>
+                `;
+                }
+            })
+            .catch(error => {
+                console.error("Error loading ratings: ", error);
+                tableBody.innerHTML = `
+                <tr>
+                    <td colspan="${roomMembers.length + 2}" class="py-8 text-center text-red-500">
+                        Error loading ratings: ${error.message}
+                    </td>
+                </tr>
+            `;
+            });
+    }
+
+    // Helper function to get color class based on rating value
+    function getColorForRating(rating) {
+        rating = parseFloat(rating);
+        if (rating >= 8.5) return 'bg-green-500';
+        if (rating >= 7) return 'bg-green-400';
+        if (rating >= 5.5) return 'bg-yellow-400';
+        if (rating >= 4) return 'bg-yellow-600';
+        if (rating >= 2.5) return 'bg-red-400';
+        return 'bg-red-600';
+    }
+
+    // Глобальная переменная для кеширования рекомендаций
+    let cachedRecommendations = null;
+    let isLoadingRecommendations = false;
+
+    function loadRecommendedAlbums() {
+        console.log("===== Starting to load recommended albums =====");
+        const recommendedContainer = document.getElementById('recommended-albums');
+
+        // Если уже загружаем, просто выходим
+        if (isLoadingRecommendations) {
+            console.log("Already loading recommendations, skipping");
+            return;
+        }
+
+        // Если у нас есть кешированные рекомендации, используем их сразу
+        if (cachedRecommendations && cachedRecommendations.length > 0) {
+            console.log("Using cached recommendations");
+            displayRecommendedAlbums(cachedRecommendations);
+
+            // Запускаем обновление кеша в фоновом режиме
+            setTimeout(fetchFreshRecommendations, 100);
+            return;
+        }
+
+        // Показываем индикатор загрузки
+        recommendedContainer.innerHTML = '<div class="col-span-full text-center py-8 text-spotify-light-gray"><div class="spinner"></div><p class="mt-2">Finding music for you...</p></div>';
+
+        // Загружаем новые рекомендации
+        fetchFreshRecommendations();
+    }
+
+    function fetchFreshRecommendations() {
+        isLoadingRecommendations = true;
+
+        // Collect all Spotify IDs for albums in the room to exclude them
+        const albumPromises = roomData.albums ? roomData.albums.map(albumId => {
+            return db.collection('albums').doc(albumId).get();
+        }) : [];
+
+        Promise.all(albumPromises)
+            .then(snapshots => {
+                const spotifyAlbumIds = [];
+
+                snapshots.forEach(doc => {
+                    if (doc.exists) {
+                        const albumData = doc.data();
+                        if (albumData.spotifyId) {
+                            spotifyAlbumIds.push(albumData.spotifyId);
+                        }
+                    }
+                });
+
+                console.log(`Found ${spotifyAlbumIds.length} Spotify album IDs to exclude`);
+
+                // Build the recommendation URL with these album IDs to exclude
+                const recommendationsUrl = `/api/recommendations?room_id=${roomId}&album_ids=${spotifyAlbumIds.join(',')}`;
+                console.log(`Fetching recommendations from: ${recommendationsUrl}`);
+
+                // Fetch recommendations from server
+                fetch(recommendationsUrl)
+                    .then(response => {
+                        console.log(`Recommendations response status: ${response.status}`);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log(`Recommendations response data received`);
+                        isLoadingRecommendations = false;
+
+                        if (data.error) {
+                            console.error(`Error from API: ${data.error}`);
+                            const recommendedContainer = document.getElementById('recommended-albums');
+                            recommendedContainer.innerHTML = `<p class="col-span-full text-center text-spotify-light-gray py-4">${data.error}</p>`;
+                            return;
+                        }
+
+                        if (!data.albums || data.albums.length === 0) {
+                            console.log("No recommendations returned");
+                            const recommendedContainer = document.getElementById('recommended-albums');
+                            recommendedContainer.innerHTML = '<p class="col-span-full text-center text-spotify-light-gray py-4">No music suggestions available</p>';
+                            return;
+                        }
+
+                        // Проверим, что альбомы, которые мы уже добавили, точно не включены
+                        const filteredAlbums = data.albums.filter(album => {
+                            return !spotifyAlbumIds.includes(album.id);
+                        });
+
+                        console.log(`After additional filtering: ${filteredAlbums.length} albums remain`);
+
+                        // Кешируем результаты
+                        cachedRecommendations = filteredAlbums;
+
+                        // Обновляем отображение
+                        displayRecommendedAlbums(filteredAlbums);
+                    })
+                    .catch(error => {
+                        console.error("Error fetching recommendations:", error);
+                        isLoadingRecommendations = false;
+                        const recommendedContainer = document.getElementById('recommended-albums');
+                        recommendedContainer.innerHTML = '<p class="col-span-full text-center text-red-500 py-4">Error loading music suggestions</p>';
+                    });
+            })
+            .catch(error => {
+                console.error("Error getting album data:", error);
+                isLoadingRecommendations = false;
+                const recommendedContainer = document.getElementById('recommended-albums');
+                recommendedContainer.innerHTML = '<p class="col-span-full text-center text-red-500 py-4">Error loading album data</p>';
+            });
+    }
+
+    function displayRecommendedAlbums(albums) {
+        const recommendedContainer = document.getElementById('recommended-albums');
+        recommendedContainer.innerHTML = '';
+
+        console.log(`Displaying ${albums.length} recommended albums`);
+
+        // Update the heading
+        const headingElement = document.querySelector("h2.text-2xl.font-bold.mb-4");
+        if (headingElement) {
+            headingElement.textContent = "Popular Music Suggestions";
+        }
+
+        // Display albums
+        albums.forEach(album => {
+            const albumCard = document.createElement('div');
+            albumCard.className = 'album-card cursor-pointer';
+
+            const imageUrl = album.images && album.images.length > 0
+                ? album.images[0].url
+                : 'https://i.scdn.co/image/ab67616d0000b273c628cc25720a9648b1219e5b';
+
+            const artistName = album.artists && album.artists.length > 0
+                ? album.artists[0].name
+                : 'Unknown Artist';
+
+            albumCard.innerHTML = `
+        <img src="${imageUrl}" alt="${album.name}" class="album-cover mb-3">
+        <div class="album-title">${album.name}</div>
+        <div class="album-artist">${artistName}</div>
+        <button class="btn-spotify w-full mt-3 text-sm flex items-center justify-center add-recommended-btn" data-album-id="${album.id}">
+            <i class="fa-solid fa-plus mr-2"></i> Add to Room
+        </button>
+    `;
+
+            // Add event listener for add button
+            albumCard.querySelector('.add-recommended-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                addAlbumToRoom(album);
+            });
+
+            recommendedContainer.appendChild(albumCard);
+        });
+    }
+
+    document.getElementById('album-search').addEventListener('input', function () {
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            // Clear results if query is too short
+            document.getElementById('search-results').innerHTML = '';
+            return;
+        }
+
+        // Show loading spinner
+        document.getElementById('search-results').innerHTML = '<div class="col-span-full flex justify-center py-4"><div class="spinner"></div></div>';
+
+        // Debounce the search to avoid too many requests
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            searchAlbums(query);
+        }, 300);
+    });
+
+    function searchAlbums(query) {
+        if (!query) return;
+
+        const searchResults = document.getElementById('search-results');
+        searchResults.innerHTML = '<div class="col-span-full flex justify-center py-4"><div class="spinner"></div></div>';
+
+        fetch(`/api/search-album?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                searchResults.innerHTML = '';
+
+                if (data.error) {
+                    if (data.auth_url) {
+                        searchResults.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <p class="mb-4 text-spotify-light-gray">You need to authenticate with Spotify first</p>
+                            <a href="${data.auth_url}" class="btn-spotify btn-spotify-sm">Connect Spotify</a>
+                        </div>
+                    `;
+                    } else {
+                        searchResults.innerHTML = `<div class="col-span-full text-center py-8 text-red-500">${data.error}</div>`;
+                    }
+                    return;
+                }
+
+                const albums = data.albums.items;
+                if (albums.length === 0) {
+                    searchResults.innerHTML = '<div class="col-span-full text-center py-8 text-spotify-light-gray">No albums found</div>';
+                    return;
+                }
+
+                albums.forEach(album => {
+                    const albumCard = document.createElement('div');
+                    albumCard.className = 'album-card cursor-pointer';
+
+                    albumCard.innerHTML = `
+                    <img src="${album.images[0]?.url || 'https://i.scdn.co/image/ab67616d0000b273c628cc25720a9648b1219e5b'}" alt="${album.name}" class="album-cover mb-3">
+                    <div class="album-title">${album.name}</div>
+                    <div class="album-artist">${album.artists[0]?.name || 'Unknown Artist'}</div>
+                    <button class="btn-spotify w-full mt-3 text-sm flex items-center justify-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Add to Room
+                    </button>
+                `;
+
+                    albumCard.querySelector('button').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        addAlbumToRoom(album);
+                    });
+
+                    searchResults.appendChild(albumCard);
+                });
+            })
+            .catch(error => {
+                console.error('Error searching albums:', error);
+                searchResults.innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Error searching albums</div>';
+            });
+    }
+
+    function addAlbumToRoom(album) {
+        // Показываем анимацию добавления на кнопке
+        const addButton = event.currentTarget;
+        const originalButtonContent = addButton.innerHTML;
+        addButton.disabled = true;
+        addButton.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Adding...';
+
+        // Check if album already exists in database
+        db.collection('albums')
+            .where('spotifyId', '==', album.id)
+            .get()
+            .then(snapshot => {
+                let albumId = null;
+
+                if (!snapshot.empty) {
+                    // Album already exists, get its ID
+                    albumId = snapshot.docs[0].id;
+                    addAlbumToCurrentRoom(albumId, addButton, originalButtonContent);
+                } else {
+                    // Album doesn't exist, create new record
+                    const newAlbumRef = db.collection('albums').doc();
+                    albumId = newAlbumRef.id;
+
+                    // Get album tracks
+                    fetch(`/api/album/${album.id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const tracks = data.tracks.items.map(track => ({
+                                name: track.name,
+                                duration_ms: track.duration_ms,
+                                track_number: track.track_number,
+                                spotifyId: track.id
+                            }));
+
+                            // Save album data
+                            newAlbumRef.set({
+                                spotifyId: album.id,
+                                name: album.name,
+                                artist: album.artists[0]?.name || 'Unknown Artist',
+                                artistId: album.artists[0]?.id, // Сохраняем ID артиста
+                                coverUrl: album.images[0]?.url || '',
+                                releaseDate: album.release_date,
+                                tracks: tracks,
+                                addedBy: "spotify:{{ session.get('spotify_user', {}).get('id', '') }}",
+                                addedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            })
+                                .then(() => {
+                                    addAlbumToCurrentRoom(albumId, addButton, originalButtonContent);
+                                })
+                                .catch(error => {
+                                    console.error("Error saving album: ", error);
+                                    // Восстанавливаем кнопку
+                                    addButton.disabled = false;
+                                    addButton.innerHTML = originalButtonContent;
+                                    // Показываем ошибку
+                                    const albumCard = addButton.closest('.album-card');
+                                    showTemporaryMessage(albumCard, "Error adding album: " + error.message, 'error');
+                                });
+                        });
+                }
+            });
+    }
+
+    function addAlbumToCurrentRoom(albumId, addButton, originalButtonContent) {
+        // Check if album is already in the room
+        if (roomData.albums && roomData.albums.includes(albumId)) {
+            // Восстанавливаем кнопку
+            addButton.disabled = false;
+            addButton.innerHTML = originalButtonContent;
+            // Показываем сообщение
+            const albumCard = addButton.closest('.album-card');
+            showTemporaryMessage(albumCard, "This album is already in the room", 'warning');
+            return;
+        }
+
+        // Add album to room
+        db.collection('rooms').doc(roomId).update({
+            albums: firebase.firestore.FieldValue.arrayUnion(albumId)
+        })
+            .then(() => {
+                // Меняем вид кнопки на успешный
+                addButton.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Added!';
+                addButton.classList.remove('btn-spotify');
+                addButton.classList.add('bg-green-500');
+
+                // Показываем сообщение
+                const albumCard = addButton.closest('.album-card');
+                showTemporaryMessage(albumCard, "Album added successfully!", 'success');
+
+                // Через 2 секунды восстанавливаем кнопку
+                setTimeout(() => {
+                    addButton.disabled = false;
+                    addButton.innerHTML = originalButtonContent;
+                    addButton.classList.add('btn-spotify');
+                    addButton.classList.remove('bg-green-500');
+                }, 2000);
+
+                // Обновляем данные комнаты без переключения вкладки
+                // Только добавляем альбом в текущие данные комнаты
+                if (!roomData.albums) {
+                    roomData.albums = [albumId];
+                } else if (!roomData.albums.includes(albumId)) {
+                    roomData.albums.push(albumId);
+                }
+
+                // Обновляем список альбомов
+                loadAlbums();
+
+                // Если это первый альбом, загружаем рекомендации
+                if (roomData.albums.length === 1) {
+                    loadRecommendedAlbums();
+                } else {
+                    // Обновим кеш рекомендаций в фоне
+                    setTimeout(fetchFreshRecommendations, 200);
+                }
+            })
+            .catch(error => {
+                console.error("Error adding album to room: ", error);
+                // Восстанавливаем кнопку
+                addButton.disabled = false;
+                addButton.innerHTML = originalButtonContent;
+                // Показываем ошибку
+                const albumCard = addButton.closest('.album-card');
+                showTemporaryMessage(albumCard, "Error adding album: " + error.message, 'error');
+            });
+    }
+
+    // Функция для показа временного сообщения на карточке альбома
+    function showTemporaryMessage(albumCard, message, type) {
+        const messageEl = document.createElement('div');
+        messageEl.className = 'notification-message absolute left-0 right-0 p-2 text-center text-sm animate-fade-in';
+
+        if (type === 'success') {
+            messageEl.classList.add('bg-green-500', 'bg-opacity-90', 'text-white');
+        } else if (type === 'error') {
+            messageEl.classList.add('bg-red-500', 'bg-opacity-90', 'text-white');
+        } else if (type === 'warning') {
+            messageEl.classList.add('bg-yellow-500', 'bg-opacity-90', 'text-white');
+        }
+
+        messageEl.textContent = message;
+
+        // Добавляем сообщение в начало карточки
+        albumCard.prepend(messageEl);
+
+        // Удаляем через 3 секунды
+        setTimeout(() => {
+            messageEl.classList.add('animate-fade-out');
+            setTimeout(() => {
+                messageEl.remove();
+            }, 500);
+        }, 2500);
+    }
+
+    // Remove album from room
+    function removeAlbumFromRoom(albumId) {
+        db.collection('rooms').doc(roomId).update({
+            albums: firebase.firestore.FieldValue.arrayRemove(albumId)
+        })
+            .then(() => {
+                alert("Album removed successfully!");
+
+                // Show the delete room button again after operation is complete
+                const deleteRoomBtn = document.getElementById('delete-room-btn');
+                if (deleteRoomBtn && isRoomCreator) {
+                    deleteRoomBtn.style.display = 'flex';
+                }
+
+                loadRoomData();
+            })
+            .catch(error => {
+                console.error("Error removing album:", error);
+                alert("Error removing album: " + error.message);
+
+                // Show the delete room button again even if there was an error
+                const deleteRoomBtn = document.getElementById('delete-room-btn');
+                if (deleteRoomBtn && isRoomCreator) {
+                    deleteRoomBtn.style.display = 'flex';
+                }
+            });
+    }
+
+    // Remove member from room
+    function removeMemberFromRoom(memberId) {
+        db.collection('rooms').doc(roomId).update({
+            members: firebase.firestore.FieldValue.arrayRemove(memberId)
+        })
+            .then(() => {
+                alert("Member removed successfully!");
+
+                // Show the delete room button again after operation is complete
+                const deleteRoomBtn = document.getElementById('delete-room-btn');
+                if (deleteRoomBtn && isRoomCreator) {
+                    deleteRoomBtn.style.display = 'flex';
+                }
+
+                loadRoomData();
+            })
+            .catch(error => {
+                console.error("Error removing member:", error);
+                alert("Error removing member: " + error.message);
+
+                // Show the delete room button again even if there was an error
+                const deleteRoomBtn = document.getElementById('delete-room-btn');
+                if (deleteRoomBtn && isRoomCreator) {
+                    deleteRoomBtn.style.display = 'flex';
+                }
+            });
+    }
+
+    // Delete entire room
+    function deleteRoom() {
+        db.collection('rooms').doc(roomId).delete()
+            .then(() => {
+                alert("Room deleted successfully!");
+                window.location.href = '/my-rooms';
+            })
+            .catch(error => {
+                console.error("Error deleting room:", error);
+                alert("Error deleting room: " + error.message);
+            });
+    }
+
+    // Update room details
+    function updateRoomDetails() {
+        const roomName = document.getElementById('edit-room-name').value.trim();
+
+        if (!roomName) {
+            alert("Room name cannot be empty!");
+            return;
+        }
+
+        db.collection('rooms').doc(roomId).update({
+            name: roomName
+        })
+            .then(() => {
+                alert("Room updated successfully!");
+                document.getElementById('edit-room-modal').classList.add('hidden');
+                loadRoomData();
+            })
+            .catch(error => {
+                console.error("Error updating room:", error);
+                alert("Error updating room: " + error.message);
+            });
+    }
+
+    // Add member to room
+    function addMemberToRoom() {
+        const memberInput = document.getElementById('member-id-input').value.trim();
+
+        if (!memberInput) {
+            alert("Please enter a Spotify ID or email");
+            return;
+        }
+
+        // Format member ID
+        let memberId = memberInput;
+        if (!memberId.startsWith('spotify:')) {
+            memberId = `spotify:${memberId}`;
+        }
+
+        // Check if member is already in the room
+        if (roomData.members && roomData.members.includes(memberId)) {
+            alert("This member is already in the room");
+            return;
+        }
+
+        // Add member to room
+        db.collection('rooms').doc(roomId).update({
+            members: firebase.firestore.FieldValue.arrayUnion(memberId)
+        })
+            .then(() => {
+                alert("Member added successfully!");
+                document.getElementById('member-id-input').value = '';
+                document.getElementById('add-member-container').classList.add('hidden');
+                loadRoomData();
+            })
+            .catch(error => {
+                console.error("Error adding member:", error);
+                alert("Error adding member: " + error.message);
+            });
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            // Show selected tab content
+            const tabName = this.getAttribute('data-tab');
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+
+            // Show the delete room button if we're not on a deletion-related tab
+            const deleteRoomBtn = document.getElementById('delete-room-btn');
+            if (deleteRoomBtn && isRoomCreator) {
+                deleteRoomBtn.style.display = 'flex';
+            }
+        });
+    });
+
+    // Share room button
+    document.getElementById('share-room-btn').addEventListener('click', function () {
+        const container = document.getElementById('share-link-container');
+        container.classList.toggle('hidden');
+    });
+
+    // Copy share link button
+    document.getElementById('copy-share-link').addEventListener('click', function () {
+        const shareLink = document.getElementById('share-link');
+        navigator.clipboard.writeText(shareLink.value)
+            .then(() => {
+                alert("Link copied to clipboard!");
+            })
+            .catch(err => {
+                console.error('Could not copy text: ', err);
+            });
+    });
+
+    // Edit room button
+    document.getElementById('edit-room-btn').addEventListener('click', function () {
+        document.getElementById('edit-room-modal').classList.remove('hidden');
+    });
+
+    // Close edit modal button
+    document.getElementById('close-edit-modal').addEventListener('click', function () {
+        document.getElementById('edit-room-modal').classList.add('hidden');
+    });
+
+    // Save room changes button
+    document.getElementById('save-room-btn').addEventListener('click', updateRoomDetails);
+
+    // Add member button
+    document.getElementById('add-member-btn').addEventListener('click', function () {
+        document.getElementById('add-member-container').classList.toggle('hidden');
+    });
+
+    // Confirm add member button
+    document.getElementById('confirm-add-member').addEventListener('click', addMemberToRoom);
+
+    // Delete confirmation modal buttons
+    document.getElementById('cancel-delete-btn').addEventListener('click', function () {
+        document.getElementById('delete-confirmation-modal').classList.add('hidden');
+
+        // Show the delete room button again after canceling
+        const deleteRoomBtn = document.getElementById('delete-room-btn');
+        if (deleteRoomBtn && isRoomCreator) {
+            deleteRoomBtn.style.display = 'flex';
+        }
+
+        currentDeleteItem = null;
+        currentDeleteType = null;
+    });
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', function () {
+        document.getElementById('delete-confirmation-modal').classList.add('hidden');
+
+        if (currentDeleteType === 'album') {
+            removeAlbumFromRoom(currentDeleteItem);
+        } else if (currentDeleteType === 'member') {
+            removeMemberFromRoom(currentDeleteItem);
+        } else if (currentDeleteType === 'room') {
+            deleteRoom();
+        }
+
+        currentDeleteItem = null;
+        currentDeleteType = null;
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        loadRoomData();
+    });
+
+    // This script handles both room.html and album.html tabs without breaking rating functionality
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabBar = document.querySelector('.tab-bar');
+
+        if (!tabBar) return;
+
+        // Get existing active tab
+        const activeTabName = tabBar.querySelector('.tab.active')?.getAttribute('data-tab') || '';
+
+        // Determine which page we're on by looking at the URL or content
+        const isAlbumPage = window.location.pathname.includes('/album/') ||
+            document.getElementById('overview-tab') !== null;
+
+        // Create new container
+        const newTabBar = document.createElement('div');
+        newTabBar.className = 'new-tab-bar';
+        newTabBar.style.cssText = 'display: flex; width: 100%; margin: 0; padding: 0; background-color: #121212;';
+
+        // Tab data - different for each page
+        const tabData = isAlbumPage ?
+            // Album page tabs
+            [
+                { name: 'overview', icon: 'fa-music', text: 'Overview' },
+                { name: 'room-ratings', icon: 'fa-chart-simple', text: 'Room Ratings' },
+                { name: 'rate', icon: 'fa-heart', text: 'Rate Album' },
+                { name: 'reviews', icon: 'fa-comment', text: 'Reviews' }
+            ] :
+            // Room page tabs
+            [
+                { name: 'albums', icon: 'fa-circle-play', text: 'Albums' },
+                { name: 'add-album', icon: 'fa-plus', text: 'Add Album' },
+                { name: 'members', icon: 'fa-user-group', text: 'Members' },
+                { name: 'ratings', icon: 'fa-star', text: 'Ratings' }
+            ];
+
+        // If no active tab is found, set default based on page
+        const defaultActiveTab = isAlbumPage ? 'overview' : 'albums';
+        const currentActiveTab = activeTabName || defaultActiveTab;
+
+        // Create tabs
+        tabData.forEach(tab => {
+            const tabElement = document.createElement('div');
+            tabElement.className = `new-tab ${tab.name === currentActiveTab ? 'active' : ''}`;
+            tabElement.setAttribute('data-tab', tab.name);
+            tabElement.style.cssText = `
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 0;
+      color: ${tab.name === currentActiveTab ? 'white' : '#b3b3b3'};
+      background-color: ${tab.name === currentActiveTab ? '#1DB954' : '#121212'};
+      cursor: pointer;
+      font-weight: 600;
+      gap: 8px;
+      transition: background-color 0.2s;
+    `;
+
+            tabElement.innerHTML = `<i class="fa-solid ${tab.icon}"></i> ${tab.text}`;
+
+            // Add click event
+            tabElement.addEventListener('click', function () {
+                // Get selected tab content
+                const tabName = this.getAttribute('data-tab');
+
+                // Update active states
+                document.querySelectorAll('.new-tab').forEach(t => {
+                    t.classList.remove('active');
+                    t.style.backgroundColor = '#121212';
+                    t.style.color = '#b3b3b3';
+                });
+                this.classList.add('active');
+                this.style.backgroundColor = '#1DB954';
+                this.style.color = 'white';
+
+                // Show selected tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(tabName + '-tab')?.classList.remove('hidden');
+            });
+
+            newTabBar.appendChild(tabElement);
+        });
+
+        // Replace old tab bar with new one
+        tabBar.parentNode.replaceChild(newTabBar, tabBar);
+
+        // Add necessary styles
+        const style = document.createElement('style');
+        style.textContent = `
+    .new-tab-bar {
+      display: flex !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .new-tab {
+      flex: 1 !important;
+      margin: 0 !important;
+      padding: 16px 0 !important;
+      text-align: center !important;
+    }
+    .new-tab.active {
+      background-color: #1DB954 !important;
+      color: white !important;
+    }
+  `;
+        document.head.appendChild(style);
+    });
+
+    // Add CSS for the delete button
+    const style = document.createElement('style');
+    style.textContent = `
+    #delete-room-btn {
+        background-color: #dc2626;
+    }
+    #delete-room-btn:hover {
+        background-color: #b91c1c;
+    }
+`;
+    document.head.appendChild(style);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Check if we're on the album page
+        if (window.location.pathname.includes('/album/')) {
+            // Fix for the missing submit-rating-btn
+            const ratingForm = document.getElementById('rating-form');
+
+            if (ratingForm) {
+                // Remove the problematic event listener at the bottom of album.html
+                // (This line won't do anything if the listener isn't attached, so it's safe)
+                const submitRatingBtn = document.getElementById('submit-rating-btn');
+                if (!submitRatingBtn) {
+                    console.log('Fixing missing submit-rating-btn reference');
+                    // The form already has its own submit handler, so no need to add another
+                }
+            }
+        }
+    });
+    // Initialize the tab system once the DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        initializeTabs();
+    });
+
+    // Main function to initialize our tab system
+    function initializeTabs() {
+        const tabBar = document.querySelector('.tab-bar');
+        if (!tabBar) return;
+
+        // Determine which page we're on
+        const isAlbumPage = window.location.pathname.includes('/album/') ||
+            document.getElementById('overview-tab') !== null;
+
+        // Get currently active tab
+        const activeTabName = tabBar.querySelector('.tab.active')?.getAttribute('data-tab') ||
+            (isAlbumPage ? 'overview' : 'albums');
+
+        // Configure tabs based on page type
+        const tabConfig = isAlbumPage ?
+            // Album page tabs
+            [
+                { name: 'overview', icon: 'fa-music', text: 'Overview' },
+                { name: 'room-ratings', icon: 'fa-chart-simple', text: 'Room Ratings' },
+                { name: 'rate', icon: 'fa-heart', text: 'Rate Album' },
+                { name: 'reviews', icon: 'fa-comment', text: 'Reviews' }
+            ] :
+            // Room page tabs
+            [
+                { name: 'albums', icon: 'fa-circle-play', text: 'Albums' },
+                { name: 'add-album', icon: 'fa-plus', text: 'Add Album' },
+                { name: 'members', icon: 'fa-user-group', text: 'Members' },
+                { name: 'ratings', icon: 'fa-star', text: 'Ratings' }
+            ];
+
+        // Create the new tab container
+        const spotifyTabs = document.createElement('div');
+        spotifyTabs.className = 'spotify-tabs';
+        spotifyTabs.style.display = 'flex';
+        spotifyTabs.style.width = '100%';
+        spotifyTabs.style.backgroundColor = '#121212';
+        spotifyTabs.style.marginBottom = '24px';
+        spotifyTabs.style.borderRadius = '4px';
+        spotifyTabs.style.overflow = 'hidden';
+
+        // Create and add each tab
+        window.tabReferences = {};
+
+        tabConfig.forEach(tab => {
+            const tabElement = document.createElement('div');
+            tabElement.className = `spotify-tab ${tab.name === activeTabName ? 'active' : ''}`;
+            tabElement.setAttribute('data-tab', tab.name);
+
+            tabElement.innerHTML = `<i class="fa-solid ${tab.icon}"></i> <span>${tab.text}</span>`;
+
+            // Add click event
+            tabElement.addEventListener('click', function () {
+                // Update active states
+                document.querySelectorAll('.spotify-tab').forEach(t => {
+                    t.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // Show selected tab content
+                const tabName = this.getAttribute('data-tab');
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(tabName + '-tab')?.classList.remove('hidden');
+
+                // Refresh data if needed (for album reviews)
+                if (tabName === 'reviews' && typeof loadRatings === 'function') {
+                    loadRatings();
+                }
+            });
+
+            // Store reference
+            window.tabReferences[tab.name] = tabElement;
+            spotifyTabs.appendChild(tabElement);
+        });
+
+        // Replace the old tab bar
+        tabBar.parentNode.replaceChild(spotifyTabs, tabBar);
+
+        // Add helper function for programmatic tab switching
+        window.switchToTab = function (tabName) {
+            const tab = window.tabReferences[tabName];
+            if (tab) {
+                tab.click();
+                return true;
+            }
+            return false;
+        };
+
+        // Fix for old code that might try to use the old tab system
+        if (typeof document.querySelector_original === 'undefined') {
+            document.querySelector_original = document.querySelector;
+            document.querySelector = function (selector) {
+                if (selector && typeof selector === 'string' && selector.includes('.tab[data-tab=')) {
+                    // Extract the tab name from the selector
+                    const tabNameMatch = selector.match(/data-tab="([^"]+)"/);
+                    if (tabNameMatch && tabNameMatch[1]) {
+                        const tabName = tabNameMatch[1];
+                        // Return a proxy object with click method
+                        return {
+                            click: function () {
+                                window.switchToTab(tabName);
+                            }
+                        };
+                    }
+                }
+                // Otherwise use the original function
+                return document.querySelector_original.call(document, selector);
+            };
+        }
+
+        // Set flag to prevent duplicate initialization
+        window.tabsInitialized = true;
+    }
+
+    // Add the necessary CSS
+    const tabStyle = document.createElement('style');
+    tabStyle.textContent = `
+    .spotify-tabs {
+        display: flex;
+        width: 100%;
+        margin-bottom: 24px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #121212;
+    }
+    
+    .spotify-tab {
+        flex: 1;
+        padding: 16px 0;
+        color: #b3b3b3;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+        gap: 8px;
+    }
+    
+    .spotify-tab:hover {
+        color: #ffffff;
+    }
+    
+    .spotify-tab.active {
+        background-color: #1DB954;
+        color: #ffffff;
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .spotify-tabs {
+            position: sticky;
+            top: 60px;
+            z-index: 10;
+            margin-bottom: 16px;
+        }
+        
+        .spotify-tab {
+            padding: 12px 0;
+            font-size: 13px;
+        }
+        
+        .spotify-tab i {
+            font-size: 16px;
+        }
+    }
+    
+    /* For very small screens */
+    @media (max-width: 380px) {
+        .spotify-tab span {
+            display: none;
+        }
+        
+        .spotify-tab i {
+            font-size: 18px;
+        }
+    }
+`;
+    // Add this code at the end of both room.html and album.html script sections
+    document.addEventListener('DOMContentLoaded', function () {
+        // Apply direct style fixes to tabs
+        const style = document.createElement('style');
+        style.innerHTML = `
+        /* Remove any existing tab styles */
+        .tab-bar, .new-tab-bar, .spotify-tabs {
+            background-color: #121212 !important;
+            display: flex !important;
+            width: 100% !important;
+            margin-bottom: 24px !important;
+            border-radius: 4px !important;
+            overflow: hidden !important;
+        }
+        
+        /* Force consistent tab styles */
+        .tab, .new-tab, .spotify-tab {
+            flex: 1 !important;
+            padding: 14px 0 !important;
+            color: #b3b3b3 !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s, color 0.2s !important;
+            gap: 8px !important;
+            background-color: transparent !important;
+        }
+        
+        /* Active tab styles */
+        .tab.active, .new-tab.active, .spotify-tab.active, 
+        .tab[data-state="active"], .new-tab[data-state="active"], .spotify-tab[data-state="active"] {
+            background-color: #1DB954 !important;
+            color: #ffffff !important;
+        }
+        
+        /* Hover styles */
+        .tab:hover, .new-tab:hover, .spotify-tab:hover {
+            color: #ffffff !important;
+        }
+    `;
+        document.head.appendChild(style);
+
+        // Safety check - ensure all tabs have correct event listeners
+        setTimeout(function () {
+            const tabs = document.querySelectorAll('.tab, .new-tab, .spotify-tab');
+            tabs.forEach(tab => {
+                // Remove existing click listeners (can't do directly, so create a clone)
+                const newTab = tab.cloneNode(true);
+                tab.parentNode.replaceChild(newTab, tab);
+
+                // Add fresh click listener
+                newTab.addEventListener('click', function () {
+                    // Get all tabs in container and remove active class
+                    const allTabs = this.parentNode.querySelectorAll('.tab, .new-tab, .spotify-tab');
+                    allTabs.forEach(t => {
+                        t.classList.remove('active');
+                        t.setAttribute('data-state', '');
+                    });
+
+                    // Make this tab active
+                    this.classList.add('active');
+                    this.setAttribute('data-state', 'active');
+
+                    // Show correct content
+                    const tabName = this.getAttribute('data-tab');
+                    if (tabName) {
+                        document.querySelectorAll('.tab-content').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        const tabContent = document.getElementById(tabName + '-tab');
+                        if (tabContent) {
+                            tabContent.classList.remove('hidden');
+                        }
+                    }
+                });
+            });
+        }, 100);
+    });
+    /**
+ * SoundRoom Tab Replacement
+ * This code completely replaces the existing tabs with a new implementation
+ */
+    document.addEventListener('DOMContentLoaded', function () {
+        // Run after a slight delay to ensure DOM is fully loaded and manipulated by other scripts
+        setTimeout(function () {
+            // First, find all tab containers by various selectors that might exist
+            const tabContainers = document.querySelectorAll('.tab-bar, .new-tab-bar, .tab-container, .spotify-tabs');
+
+            if (tabContainers.length === 0) return;
+
+            tabContainers.forEach(container => {
+                // Determine which page we're on to set appropriate tabs
+                const isAlbumPage = window.location.pathname.includes('/album/') ||
+                    document.getElementById('overview-tab') !== null;
+
+                // Find which tab is currently active
+                const activeTab = container.querySelector('.active, [data-state="active"]');
+                const currentActiveTabName = activeTab ?
+                    activeTab.getAttribute('data-tab') :
+                    (isAlbumPage ? 'overview' : 'albums');
+
+                // Define tabs based on page type
+                const tabDefinitions = isAlbumPage ?
+                    [
+                        { name: 'overview', icon: 'fa-music', text: 'Overview' },
+                        { name: 'room-ratings', icon: 'fa-chart-simple', text: 'Room Ratings' },
+                        { name: 'rate', icon: 'fa-heart', text: 'Rate Album' },
+                        { name: 'reviews', icon: 'fa-comment', text: 'Reviews' }
+                    ] :
+                    [
+                        { name: 'albums', icon: 'fa-circle-play', text: 'Albums' },
+                        { name: 'add-album', icon: 'fa-plus', text: 'Add Album' },
+                        { name: 'members', icon: 'fa-user-group', text: 'Members' },
+                        { name: 'ratings', icon: 'fa-star', text: 'Ratings' }
+                    ];
+
+                // Create completely new container with unique class name
+                const newContainer = document.createElement('div');
+                newContainer.className = 'soundroom-custom-tabs-v1';
+                newContainer.setAttribute('data-original-container', container.className);
+
+                // Add tabs to new container
+                tabDefinitions.forEach(tab => {
+                    const tabElement = document.createElement('div');
+                    tabElement.className = 'soundroom-custom-tab-v1';
+                    if (tab.name === currentActiveTabName) {
+                        tabElement.className += ' soundroom-custom-tab-active-v1';
+                    }
+                    tabElement.setAttribute('data-tab', tab.name);
+
+                    tabElement.innerHTML = `<i class="fa-solid ${tab.icon}"></i> <span>${tab.text}</span>`;
+
+                    // Add click handler
+                    tabElement.addEventListener('click', function (e) {
+                        // Prevent any other handlers from firing
+                        e.stopPropagation();
+
+                        // Update active state visually
+                        document.querySelectorAll('.soundroom-custom-tab-v1').forEach(t => {
+                            t.classList.remove('soundroom-custom-tab-active-v1');
+                        });
+                        this.classList.add('soundroom-custom-tab-active-v1');
+
+                        // Show correct content
+                        const tabName = this.getAttribute('data-tab');
+                        document.querySelectorAll('.tab-content').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        const tabContent = document.getElementById(tabName + '-tab');
+                        if (tabContent) {
+                            tabContent.classList.remove('hidden');
+                        }
+
+                        // Special handling for reviews tab to refresh data
+                        if (tabName === 'reviews' && typeof loadRatings === 'function') {
+                            loadRatings();
+                        }
+                    });
+
+                    newContainer.appendChild(tabElement);
+                });
+
+                // Replace the original container with our new one
+                container.parentNode.replaceChild(newContainer, container);
+            });
+
+            // Add our guaranteed-priority styles
+            const customStyle = document.createElement('style');
+            customStyle.innerHTML = `
+            .soundroom-custom-tabs-v1 {
+                display: flex !important;
+                width: 100% !important;
+                margin-bottom: 24px !important;
+                border-radius: 4px !important;
+                background-color: #121212 !important;
+                overflow: hidden !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+            }
+            
+            .soundroom-custom-tab-v1 {
+                flex: 1 !important;
+                padding: 16px 0 !important;
+                color: #b3b3b3 !important;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                cursor: pointer !important;
+                transition: all 0.2s ease !important;
+                gap: 8px !important;
+                background-color: transparent !important;
+                border: none !important;
+                outline: none !important;
+                text-align: center !important;
+            }
+            
+            .soundroom-custom-tab-v1:hover {
+                color: #ffffff !important;
+                background-color: rgba(255,255,255,0.1) !important;
+            }
+            
+            .soundroom-custom-tab-active-v1 {
+                background-color: #1DB954 !important;
+                color: #ffffff !important;
+            }
+            
+            .soundroom-custom-tab-active-v1:hover {
+                background-color: #1DB954 !important;
+            }
+            
+            .soundroom-custom-tab-v1 i {
+                font-size: 16px !important;
+            }
+            
+            @media (max-width: 768px) {
+                .soundroom-custom-tabs-v1 {
+                    position: sticky !important;
+                    top: 60px !important;
+                    z-index: 10 !important;
+                    margin-bottom: 16px !important;
+                }
+                
+                .soundroom-custom-tab-v1 {
+                    padding: 12px 0 !important;
+                    font-size: 13px !important;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .soundroom-custom-tab-v1 span {
+                    display: none !important;
+                }
+                
+                .soundroom-custom-tab-v1 i {
+                    font-size: 18px !important;
+                }
+            }
+        `;
+            document.head.appendChild(customStyle);
+
+            // Intercept any attempts to programmatically switch tabs
+            if (!window.originalSwitchToTab) {
+                window.originalSwitchToTab = window.switchToTab;
+                window.switchToTab = function (tabName) {
+                    const tab = document.querySelector(`.soundroom-custom-tab-v1[data-tab="${tabName}"]`);
+                    if (tab) {
+                        tab.click();
+                        return true;
+                    }
+                    return false;
+                };
+            }
+        }, 300); // Slight delay to ensure other scripts have run
+    });
+    document.head.appendChild(tabStyle);
+</script>
+{% endblock %}

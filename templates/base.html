@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundRoom - {% block title %}Collaborative Album Rating{% endblock %}</title>
+
+    <!-- DaisyUI and Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Spotify font - Circular -->
+    <link href="https://fonts.cdnfonts.com/css/circular-std" rel="stylesheet">
+
+    <style>
+        /* Spotify-like styles */
+        :root {
+            --spotify-black: #121212;
+            --spotify-dark-gray: #181818;
+            --spotify-gray: #282828;
+            --spotify-light-gray: #b3b3b3;
+            --spotify-white: #ffffff;
+            --spotify-green: #1DB954;
+            --spotify-dark-green: #1aa34a;
+            --spotify-hover-gray: #2a2a2a;
+        }
+
+        body {
+            font-family: 'Circular Std', 'Montserrat', sans-serif;
+            background-color: var(--spotify-black);
+            color: var(--spotify-white);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Completely redesigned layout with better mobile support */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Mobile header (visible only on mobile) */
+        .mobile-header {
+            display: none;
+            background-color: #000000;
+            height: 60px;
+            width: 100%;
+            padding: 0 16px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 50;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mobile-header-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .mobile-header-logo img {
+            height: 32px;
+        }
+
+        .mobile-menu-toggle {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--spotify-white);
+            font-size: 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Content wrapper - allows for proper sidebar+content layout */
+        .content-wrapper {
+            display: flex;
+            flex: 1;
+            height: 100vh;
+        }
+
+        /* Sidebar design */
+        .sidebar {
+            background-color: #000000;
+            width: 240px;
+            min-width: 240px;
+            height: 100vh;
+            padding: 24px 12px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 40;
+        }
+
+        .sidebar-logo {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-title {
+            color: var(--spotify-light-gray);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            padding: 0 12px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            color: var(--spotify-light-gray);
+            padding: 12px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .sidebar-link:hover {
+            color: var(--spotify-white);
+        }
+
+        .sidebar-link.active {
+            color: var(--spotify-white);
+            background-color: var(--spotify-gray);
+        }
+
+        .sidebar-link i {
+            margin-right: 16px;
+            font-size: 20px;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background-color: var(--spotify-gray);
+            margin: 8px 0 16px 0;
+        }
+
+        /* Content area */
+        .content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: linear-gradient(to bottom, #3b1f50 0%, var(--spotify-black) 300px);
+            position: relative;
+            height: 100vh;
+        }
+
+        /* Header inside content area */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            margin-bottom: 12px;
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .nav-control-btn {
+            background-color: rgba(0, 0, 0, 0.6);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--spotify-white);
+            border: none;
+            cursor: pointer;
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-profile-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 24px;
+            padding: 4px 4px 4px 4px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--spotify-green);
+            color: var(--spotify-white);
+            font-weight: bold;
+        }
+
+        .user-name {
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .user-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background-color: var(--spotify-dark-gray);
+            border-radius: 4px;
+            box-shadow: 0 16px 24px rgba(0, 0, 0, 0.3);
+            min-width: 180px;
+            z-index: 30;
+            display: none;
+        }
+
+        .user-menu.active {
+            display: block;
+        }
+
+        .user-menu-item {
+            display: block;
+            padding: 12px 16px;
+            color: var(--spotify-white);
+            text-decoration: none;
+            border-radius: 2px;
+        }
+
+        .user-menu-item:hover {
+            background-color: var(--spotify-hover-gray);
+        }
+
+        /* Main container for page content */
+        .spotify-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px 24px 24px;
+        }
+
+        /* Button styles */
+        .btn-spotify {
+            background-color: var(--spotify-green);
+            border: none;
+            color: white;
+            font-weight: 700;
+            text-transform: none;
+            border-radius: 500px;
+            padding: 14px 32px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-spotify:hover {
+            transform: scale(1.04);
+            background-color: var(--spotify-dark-green);
+        }
+
+        .btn-spotify-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        /* Album card styles */
+        .album-card {
+            background-color: var(--spotify-dark-gray);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.3s;
+        }
+
+        .album-card:hover {
+            background-color: var(--spotify-gray);
+            transform: translateY(-4px);
+        }
+
+        .album-cover {
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+        }
+
+        .album-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-top: 16px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .album-artist {
+            color: var(--spotify-light-gray);
+            font-size: 14px;
+            margin-top: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Rating styles */
+        .rating-slider {
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--spotify-gray);
+            border-radius: 2px;
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        .rating-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--spotify-green);
+            cursor: pointer;
+        }
+
+        .rating-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--spotify-green);
+            cursor: pointer;
+        }
+
+        /* Form elements */
+        .spotify-input {
+            background-color: var(--spotify-gray);
+            border: none;
+            color: var(--spotify-white);
+            padding: 12px 16px;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .spotify-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--spotify-green);
+        }
+
+        .spotify-input::placeholder {
+            color: var(--spotify-light-gray);
+        }
+
+        /* Tab styles - completely redesigned */
+        .tab-container {
+            display: flex;
+            width: 100%;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            /* Firefox */
+            -ms-overflow-style: none;
+            /* IE/Edge */
+            background-color: transparent;
+        }
+
+        .tab-container::-webkit-scrollbar {
+            display: none;
+            /* Chrome/Safari/Opera */
+        }
+
+        .tab {
+            flex: 0 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--spotify-light-gray);
+            font-weight: 600;
+            gap: 8px;
+            margin-right: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--spotify-white);
+        }
+
+        .tab.active {
+            background-color: var(--spotify-green);
+            color: var(--spotify-white);
+        }
+
+        /* Card styles */
+        .card {
+            background-color: var(--spotify-dark-gray);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--spotify-gray);
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        /* Overlay for when mobile menu is open */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 35;
+            display: none;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid var(--spotify-gray);
+            border-top: 3px solid var(--spotify-green);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast notification */
+        .notification-message {
+            top: -30px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .animate-fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ======= MOBILE RESPONSIVE STYLES ======= */
+        @media (max-width: 768px) {
+
+            /* Show mobile header, hide regular sidebar */
+            .mobile-header {
+                display: flex;
+            }
+
+            .content-wrapper {
+                margin-top: 60px;
+                height: calc(100vh - 60px);
+            }
+
+            /* Sidebar positioning for mobile */
+            .sidebar {
+                position: fixed;
+                top: 60px;
+                left: 0;
+                height: calc(100vh - 60px);
+                width: 100%;
+                max-width: 100%;
+                transform: translateX(-100%);
+                padding-bottom: 100px;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            /* Header adjustments */
+            .header {
+                padding: 16px;
+                margin-bottom: 8px;
+            }
+
+            .nav-controls {
+                gap: 8px;
+            }
+
+            .user-name {
+                display: none;
+            }
+
+            /* Content container */
+            .spotify-container {
+                padding: 0 16px 16px 16px;
+            }
+
+            /* Grid adjustments */
+            .grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px !important;
+            }
+
+            /* Album cards */
+            .album-card {
+                padding: 12px;
+            }
+
+            .album-title,
+            .album-artist {
+                font-size: 14px;
+            }
+
+            /* Button size adjustments */
+            .btn-spotify {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+
+            .btn-spotify-sm {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            /* Tab adjustments for small screens */
+            .tab {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+
+            /* Make form elements more touchable */
+            input,
+            button,
+            select,
+            textarea {
+                font-size: 16px !important;
+                /* Prevents iOS zoom */
+            }
+
+            .rating-slider::-webkit-slider-thumb {
+                width: 20px;
+                height: 20px;
+            }
+
+            .rating-slider::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+            }
+
+            /* Modal adjustments */
+            .fixed.inset-0>div {
+                width: 90% !important;
+                max-width: 90% !important;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+        }
+
+        /* Adjustments for extra small screens */
+        @media (max-width: 480px) {
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .spotify-container {
+                padding: 0 12px 12px 12px;
+            }
+
+            .header {
+                padding: 12px;
+            }
+        }
+
+        .spotify-tab {
+            flex: 1;
+            padding: 12px 0;
+            color: #b3b3b3;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .spotify-tab:hover {
+            color: #ffffff;
+        }
+
+        .spotify-tab.active {
+            background-color: #1DB954;
+            color: #ffffff;
+        }
+
+        .spotify-tab i {
+            font-size: 16px;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .spotify-tabs {
+                position: sticky;
+                top: 60px;
+                z-index: 10;
+                margin-bottom: 16px;
+            }
+
+            .spotify-tab {
+                padding: 10px 0;
+                font-size: 12px;
+            }
+
+            .spotify-tab i {
+                font-size: 14px;
+            }
+
+            /* For very small screens, show only icons */
+            @media (max-width: 380px) {
+                .spotify-tab span {
+                    display: none;
+                }
+
+                .spotify-tab i {
+                    font-size: 18px;
+                }
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Mobile Header (Visible only on mobile) -->
+        <header class="mobile-header">
+            <a href="{{ url_for('index') }}" class="mobile-header-logo">
+                {% if config.get('LOGO_SVG_PATH') %}
+                <img src="/static/soundroom.svg" alt="SoundRoom" class="h-8">
+                {% else %}
+                <span class="text-xl font-bold">SoundRoom</span>
+                {% endif %}
+            </a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </header>
+
+        <!-- Mobile menu overlay -->
+        <div id="mobile-overlay" class="mobile-overlay"></div>
+
+        <div class="content-wrapper">
+            <!-- Sidebar -->
+            <div id="sidebar" class="sidebar">
+                <div class="sidebar-logo">
+                    <a href="{{ url_for('index') }}" class="flex items-center space-x-2">
+                        {% if config.get('LOGO_SVG_PATH') %}
+                        <img src="/static/soundroom.svg" alt="SoundRoom" class="h-10">
+                        {% else %}
+                        <span class="text-2xl font-bold">SoundRoom</span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Menu</div>
+                    <a href="/" class="sidebar-link {% if request.path == '/' %}active{% endif %}">
+                        <i class="fa-solid fa-house"></i> Home
+                    </a>
+                    <a href="/my-rooms" class="sidebar-link {% if request.path == '/my-rooms' %}active{% endif %}">
+                        <i class="fa-solid fa-layer-group"></i> My Rooms
+                    </a>
+                </div>
+
+                <div class="sidebar-divider"></div>
+
+                {% if session.get('logged_in') %}
+                <div class="sidebar-section mt-auto">
+                    <div class="flex items-center px-3 py-2">
+                        {% if session.get('spotify_user', {}).get('images') and session['spotify_user']['images']|length
+                        > 0 %}
+                        <img src="{{ session['spotify_user']['images'][0]['url'] }}" alt="Profile"
+                            class="w-8 h-8 rounded-full mr-3">
+                        {% else %}
+                        <div class="w-8 h-8 rounded-full bg-spotify-green flex items-center justify-center mr-3">
+                            <span class="text-white font-bold">{{ session.get('spotify_user', {}).get('display_name',
+                                '?')[:1] }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="text-sm">
+                            <div class="font-bold">{{ session.get('spotify_user', {}).get('display_name', 'User') }}
+                            </div>
+                            <a href="/logout" class="text-spotify-light-gray hover:text-white text-xs">Log out</a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="sidebar-section mt-auto">
+                    <a href="/spotify/auth" class="btn-spotify w-full flex items-center justify-center">
+                        <i class="fa-brands fa-spotify mr-2"></i> Login with Spotify
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Content area -->
+            <div class="content-area">
+                {% if session.get('logged_in') %}
+                <div class="header">
+                    <div class="nav-controls">
+                        {% block header_nav %}
+                        <button class="nav-control-btn" onclick="javascript:history.back()">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button class="nav-control-btn" onclick="javascript:history.forward()">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        {% endblock %}
+                    </div>
+
+                    <div class="user-dropdown">
+                        <button id="user-menu-button" class="user-profile-btn">
+                            {% if session.get('spotify_user', {}).get('images') and
+                            session['spotify_user']['images']|length > 0 %}
+                            <img src="{{ session['spotify_user']['images'][0]['url'] }}" alt="Profile"
+                                class="w-7 h-7 rounded-full">
+                            {% else %}
+                            <div class="user-avatar">
+                                <span>{{ session.get('spotify_user', {}).get('display_name', '?')[:1] }}</span>
+                            </div>
+                            {% endif %}
+                            <span class="user-name">{{ session.get('spotify_user', {}).get('display_name', 'User')
+                                }}</span>
+                            <i class="fa-solid fa-caret-down text-xs"></i>
+                        </button>
+
+                        <div id="user-menu" class="user-menu">
+                            <a href="/my-rooms" class="user-menu-item">My Rooms</a>
+                            <a href="/logout" class="user-menu-item">Log out</a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="spotify-container">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase initialization -->
+    <script>
+        // Initialize Firebase from server-provided config
+        const firebaseConfig = {{ firebase_config| tojson | safe if firebase_config else '{}' }};
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Mobile sidebar functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+
+            // Toggle sidebar on mobile
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function () {
+                    sidebar.classList.toggle('active');
+
+                    // Update menu icon
+                    if (sidebar.classList.contains('active')) {
+                        this.innerHTML = '<i class="fa-solid fa-times"></i>';
+                        overlay.style.display = 'block';
+                        document.body.style.overflow = 'hidden'; // Prevent scrolling
+                    } else {
+                        this.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                        overlay.style.display = 'none';
+                        document.body.style.overflow = ''; // Allow scrolling
+                    }
+                });
+            }
+
+            // Close sidebar when clicking overlay
+            if (overlay) {
+                overlay.addEventListener('click', function () {
+                    sidebar.classList.remove('active');
+                    mobileMenuToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                    this.style.display = 'none';
+                    document.body.style.overflow = ''; // Allow scrolling
+                });
+            }
+
+            // User dropdown functionality
+            const userMenuButton = document.getElementById('user-menu-button');
+            const userMenu = document.getElementById('user-menu');
+
+            if (userMenuButton && userMenu) {
+                userMenuButton.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    userMenu.classList.toggle('active');
+                });
+
+                // Close when clicking elsewhere
+                document.addEventListener('click', function (e) {
+                    if (userMenu && userMenu.classList.contains('active') &&
+                        !userMenuButton.contains(e.target) &&
+                        !userMenu.contains(e.target)) {
+                        userMenu.classList.remove('active');
+                    }
+                });
+            }
+
+            // Make tab containers scrollable with touch gestures
+            const tabContainers = document.querySelectorAll('.tab-container');
+            tabContainers.forEach(container => {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                container.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    startX = e.pageX - container.offsetLeft;
+                    scrollLeft = container.scrollLeft;
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    isDown = false;
+                });
+
+                container.addEventListener('mouseup', () => {
+                    isDown = false;
+                });
+
+                container.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - container.offsetLeft;
+                    const walk = (x - startX) * 2; // Scroll speed
+                    container.scrollLeft = scrollLeft - walk;
+                });
+
+                // Also works with touch
+                container.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].pageX - container.offsetLeft;
+                    scrollLeft = container.scrollLeft;
+                });
+
+                container.addEventListener('touchmove', (e) => {
+                    if (e.touches.length > 1) return; // Ignore multi-touch
+                    const x = e.touches[0].pageX - container.offsetLeft;
+                    const walk = (x - startX) * 2;
+                    container.scrollLeft = scrollLeft - walk;
+                });
+            });
+        });
+
+        // Helper functions
+        function updateSliderValue(elementId, value) {
+            document.getElementById(elementId).textContent = value;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function () {
+                alert('Link copied to clipboard!');
+            }, function (err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        // Format milliseconds to mm:ss
+        function formatDuration(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        // Tab functionality (for all pages)
+        function setupTabs() {
+            const tabContainers = document.querySelectorAll('.tab-container');
+
+            tabContainers.forEach(container => {
+                const tabs = container.querySelectorAll('.tab');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function () {
+                        // Remove active class from all tabs
+                        tabs.forEach(t => t.classList.remove('active'));
+
+                        // Add active class to clicked tab
+                        this.classList.add('active');
+
+                        // Show corresponding content
+                        const tabName = this.getAttribute('data-tab');
+                        const tabContents = document.querySelectorAll('.tab-content');
+
+                        tabContents.forEach(content => {
+                            content.classList.add('hidden');
+                        });
+
+                        document.getElementById(tabName + '-tab')?.classList.remove('hidden');
+                    });
+                });
+            });
+        }
+
+        // Run setup when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            setupTabs();
+
+            // Convert existing tabs to new format if needed
+            const oldTabBars = document.querySelectorAll('.tab-bar:not(.tab-container)');
+            oldTabBars.forEach(oldBar => {
+                const newContainer = document.createElement('div');
+                newContainer.className = 'tab-container';
+
+                const oldTabs = oldBar.querySelectorAll('.tab');
+                oldTabs.forEach(oldTab => {
+                    const tabName = oldTab.getAttribute('data-tab');
+                    const isActive = oldTab.classList.contains('active');
+                    const tabContent = oldTab.innerHTML;
+
+                    const newTab = document.createElement('div');
+                    newTab.className = `tab ${isActive ? 'active' : ''}`;
+                    newTab.setAttribute('data-tab', tabName);
+                    newTab.innerHTML = tabContent;
+
+                    newContainer.appendChild(newTab);
+                });
+
+                oldBar.parentNode.replaceChild(newContainer, oldBar);
+            });
+
+            // Re-setup tabs after conversion
+            setupTabs();
+        });
+
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

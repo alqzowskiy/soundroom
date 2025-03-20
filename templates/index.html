@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Collaborative Album Rating{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-gradient {
+        background: linear-gradient(to bottom, #3b1f50 0%, var(--spotify-black) 100%);
+        padding: 36px 0;
+        margin-bottom: 36px;
+        border-radius: 8px;
+    }
+
+    .greeting {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .cta-card {
+        background: linear-gradient(115deg, #450af5, #c4efd9);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 32px;
+    }
+
+    .cta-title {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: white;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if not session.get('logged_in') %}
+<div class="hero-gradient text-center py-16 px-4">
+    <h1 class="text-5xl font-bold mb-6">Rate Albums With Friends 🎶</h1>
+    <p class="text-xl mb-8 text-spotify-light-gray max-w-2xl mx-auto">Create your own music rating room, add albums from
+        Spotify, and invite friends to share their opinions!</p>
+
+    <a href="/spotify/auth" class="btn-spotify flex items-center justify-center mx-auto max-w-xs">
+        <i class="fa-brands fa-spotify mr-2"></i> Login with Spotify
+    </a>
+</div>
+
+<div class="grid md:grid-cols-3 gap-8 mb-12">
+    <div class="card p-6 flex flex-col items-center text-center">
+        <div class="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-plus text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Create Rooms</h3>
+        <p class="text-spotify-light-gray">Create custom rooms for different music themes or friend groups.</p>
+    </div>
+
+    <div class="card p-6 flex flex-col items-center text-center">
+        <div class="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-music text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Add Albums</h3>
+        <p class="text-spotify-light-gray">Add albums directly from Spotify with all their details.</p>
+    </div>
+
+    <div class="card p-6 flex flex-col items-center text-center">
+        <div class="w-16 h-16 rounded-full bg-purple-600 flex items-center justify-center mb-4">
+            <i class="fa-solid fa-star text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Rate Together</h3>
+        <p class="text-spotify-light-gray">Rate albums by sound, lyrics, vibe, and overall impression.</p>
+    </div>
+</div>
+{% else %}
+<div class="greeting">
+    {% if current_hour < 12 %} Good morning, {% elif current_hour < 18 %} Good afternoon, {% else %} Good evening, {%
+        endif %} {{ session.get('spotify_user', {}).get('display_name', 'User' ) }} </div>
+
+        <div class="cta-card flex items-center justify-between">
+            <div>
+                <div class="cta-title">Create your first room</div>
+                <p class="text-white opacity-90 mb-4">Start rating albums with your friends!</p>
+                <button class="btn-spotify btn-spotify-sm"
+                    onclick="document.getElementById('create-room-modal').classList.remove('hidden')">
+                    Create Room
+                </button>
+            </div>
+            <img src="https://media.discordapp.net/attachments/1065316802688729149/1352259999950311495/image.png?ex=67dd5dc3&is=67dc0c43&hm=9e5d765453328c3437652d5d1930c2e30bcebbff7689a44360e3978a79e46133&=&format=webp&quality=lossless&width=538&height=543"
+                alt="Music collage" class="h-32 w-32 rounded-lg shadow-xl hidden md:block">
+        </div>
+
+        <div class="section-title">Your Rooms</div>
+
+        <div id="rooms-list" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="section-title">Recently Active Rooms</div>
+
+        <div id="recent-rooms" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Create Room Modal -->
+        <div id="create-room-modal"
+            class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+            <div class="bg-spotify-dark-gray rounded-lg w-full max-w-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Create a New Room</h3>
+                    <button onclick="document.getElementById('create-room-modal').classList.add('hidden')"
+                        class="text-spotify-light-gray hover:text-white">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="create-room-form">
+                    <div class="mb-4">
+                        <label for="room-name" class="block mb-2 text-sm font-medium text-spotify-light-gray">Room
+                            Name</label>
+                        <input type="text" id="room-name" class="spotify-input" placeholder="My Awesome Room" required>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button type="button"
+                            onclick="document.getElementById('create-room-modal').classList.add('hidden')"
+                            class="px-4 py-2 rounded-full border border-spotify-light-gray text-spotify-light-gray hover:text-white">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-spotify btn-spotify-sm">
+                            Create Room
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        {% endblock %}
+
+        {% block scripts %}
+        {% if session.get('logged_in') %}
+        <script>
+            // Load user's rooms
+            function loadUserRooms() {
+                const roomsList = document.getElementById('rooms-list');
+                const userId = "spotify:{{ session.get('spotify_user', {}).get('id', '') }}";
+
+                roomsList.innerHTML = '<div class="spinner"></div>';
+
+                db.collection('rooms')
+                    .where('members', 'array-contains', userId)
+                    .limit(8)
+                    .get()
+                    .then(snapshot => {
+                        roomsList.innerHTML = '';
+
+                        if (snapshot.empty) {
+                            roomsList.innerHTML = '<div class="col-span-full text-center py-8 text-spotify-light-gray">No rooms yet. Create your first room!</div>';
+                            return;
+                        }
+
+                        snapshot.forEach(doc => {
+                            const roomData = doc.data();
+                            const roomCard = document.createElement('div');
+                            roomCard.className = 'card cursor-pointer';
+                            roomCard.innerHTML = `
+                        <div class="p-4">
+                            <h3 class="text-lg font-bold">${roomData.name}</h3>
+                            <div class="text-sm text-spotify-light-gray mt-1">${roomData.albums?.length || 0} albums</div>
+                            <div class="mt-4 flex justify-between items-center">
+                                <div class="text-xs text-spotify-light-gray">Created: ${roomData.createdAt ? new Date(roomData.createdAt.toDate()).toLocaleDateString() : 'Recently'}</div>
+                                <div class="w-8 h-8 rounded-full bg-spotify-green flex items-center justify-center">
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                            roomCard.addEventListener('click', () => {
+                                window.location.href = `/room/${doc.id}`;
+                            });
+                            roomsList.appendChild(roomCard);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error loading rooms:", error);
+                        roomsList.innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Error loading rooms</div>';
+                    });
+            }
+
+            // Load recent rooms
+            function loadRecentRooms() {
+                const recentRooms = document.getElementById('recent-rooms');
+
+                recentRooms.innerHTML = '<div class="spinner"></div>';
+
+                db.collection('rooms')
+                    .orderBy('createdAt', 'desc')
+                    .limit(4)
+                    .get()
+                    .then(snapshot => {
+                        recentRooms.innerHTML = '';
+
+                        if (snapshot.empty) {
+                            recentRooms.innerHTML = '<div class="col-span-full text-center py-8 text-spotify-light-gray">No recent rooms</div>';
+                            return;
+                        }
+
+                        snapshot.forEach(doc => {
+                            const roomData = doc.data();
+                            const roomCard = document.createElement('div');
+                            roomCard.className = 'card cursor-pointer';
+                            roomCard.innerHTML = `
+                        <div class="p-4">
+                            <h3 class="text-lg font-bold">${roomData.name}</h3>
+                            <div class="text-sm text-spotify-light-gray mt-1">${roomData.albums?.length || 0} albums</div>
+                            <div class="mt-4 flex justify-between items-center">
+                                <div class="text-xs text-spotify-light-gray">Created: ${roomData.createdAt ? new Date(roomData.createdAt.toDate()).toLocaleDateString() : 'Recently'}</div>
+                                <div class="w-8 h-8 rounded-full bg-spotify-green flex items-center justify-center">
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                            roomCard.addEventListener('click', () => {
+                                window.location.href = `/room/${doc.id}`;
+                            });
+                            recentRooms.appendChild(roomCard);
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error loading recent rooms:", error);
+                        recentRooms.innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Error loading rooms</div>';
+                    });
+            }
+
+            // Create room form submission
+            document.getElementById('create-room-form')?.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const roomName = document.getElementById('room-name').value;
+                const userId = "spotify:{{ session.get('spotify_user', {}).get('id', '') }}";
+
+                fetch('/api/create-room', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        room_name: roomName,
+                        user_id: userId
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Save room to Firebase
+                            db.collection('rooms').doc(data.room_id).set({
+                                name: roomName,
+                                createdBy: userId,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                members: [userId],
+                                albums: []
+                            })
+                                .then(() => {
+                                    window.location.href = '/room/' + data.room_id;
+                                })
+                                .catch(error => {
+                                    console.error("Error saving room to Firestore: ", error);
+                                    alert('Error creating room: ' + error.message);
+                                });
+                        } else {
+                            alert('Error creating room: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error creating room: ' + error.message);
+                    });
+            });
+
+            // Initialize
+            document.addEventListener('DOMContentLoaded', function () {
+                loadUserRooms();
+                loadRecentRooms();
+            });
+        </script>
+        {% endif %}
+        {% endblock %}
