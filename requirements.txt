@@ -1,0 +1,6 @@
+Flask
+python-dotenv
+requests
+uuid
+base64
+gunicorn
